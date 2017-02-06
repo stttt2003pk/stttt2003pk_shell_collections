@@ -1,0 +1,533 @@
+在一个IP地址上运行多个基于域名的web站 点
+
+您的服务器有一个IP地址，而在DNS中有很多映射（CNAMES）到这个机器。 您而您想要在这个机器上运行www.example1.com和www.example2.org两个站点。
+
+注意
+
+　　在您Apache服务器的配置中创建一个虚拟主机并不会自动在您的DNS中对主机名做相应更新。您必须自 己在DNS中添加域名来指向您的IP地址。否则别人是无法看到您的web 站点的。您可以在您的hosts文件中添加这一条目来进 行测试，但这种方法仅适用于那些有这些条目的机器来使用。
+
+服务器配置
+
+# Ensure that Apache listens on port 80
+
+Listen 80
+
+# Listen for virtual host requests on all IP addresses
+
+NameVirtualHost *
+
+<VirtualHost *>
+
+DocumentRoot /www/example1
+
+ServerName www.example1.com
+
+# Other directives here
+
+</VirtualHost>
+
+ 
+
+<VirtualHost *>
+
+DocumentRoot /www/example2
+
+ServerName www.example2.org
+
+# Other directives here
+
+</VirtualHost>
+
+　　因为星号匹配所有的地址，所以主服务器不接收任何请求。因为 www.example1.com首先出现在配置文件中，所以它拥有最高 优先级，可以认为是默认或首要服务器。这意 味着如果一个接受的请求不能与某个ServerName指令相匹配， 它将会由第一个VirtualHost所伺服。
+
+注意
+
+如果您愿意，您可以用确定的IP地址来取代*。 在这种情况下，VirtualHost的参数必须 与NameVirtualHost的参数相符：
+
+NameVirtualHost 172.20.30.40
+
+<VirtualHost 172.20.30.40>
+
+# etc ...
+
+　　不论如何，当您的IP地址无法确定的时候，使用*是很方便的——比如说，您的ISP给您配置的是动态IP地址，而您有 使用了某种动态域名解析系统时。因为*匹配任何IP 地址，所以在这样的情况下，不论IP地址如何变化，您都不需要另外进行配置。
+
+　　上述配置就是您在绝大多数情况下使用基于域名的虚拟主机时将要用到 的。事实上，仅在一种情况下这样的配置不会让您满意：当您想为不同的IP 地址或是端口提供不同的内容时。
+
+　　在多于一个IP的情况下使用基于域名的虚拟主机。
+
+注意
+
+　　在这里讨论的任何技术都可以推广到使用任意数量的IP 地址。
+
+服务器有两个IP地址。一个（172.20.30.40）用于“主”服务器—— server.domain.com而另外一个 （172.20.30.50），我们将用于构建两个或多个虚拟主机。
+
+服务器配置
+
+Listen 80
+
+# This is the "main" server running on 172.20.30.40
+
+ServerName server.domain.com
+
+DocumentRoot /www/mainserver
+
+# This is the other address
+
+NameVirtualHost 172.20.30.50
+
+<VirtualHost 172.20.30.50>
+
+DocumentRoot /www/example1
+
+ServerName www.example1.com
+
+# Other directives here ...
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.50>
+
+DocumentRoot /www/example2
+
+ServerName www.example2.org
+
+# Other directives here ...
+
+</VirtualHost>
+
+　　任何不是针对172.20.30.50的请求都将由主服务器来伺服。 而提交给172.20.30.50却没有主机名或没有 Host:头的请求，都将为www.example1.com伺 服。
+
+ 
+
+在不同的IP的地址（比如一个内部和一个外部地址） 上提供相同的内容
+
+　　服务器有两个IP地址（192.168.1.1和 172.20.30.40）。这个机器位于内部（局域网）网络和外部 （广域网）之间。在外部，域名server.example.com指向 外部地址（172.20.30.40），而在内部，同样的域名指向内 部地址（192.168.1.1）。
+
+　　服务器可以配置为向来自内部和外部的请求提供同样的内容，您只需要一个VirtualHost配置段就可以达到这个目的。
+
+服务器配置
+
+NameVirtualHost 192.168.1.1
+
+NameVirtualHost 172.20.30.40
+
+<VirtualHost 192.168.1.1 172.20.30.40>
+
+DocumentRoot /www/server1
+
+ServerName server.example.com
+
+ServerAlias server
+
+</VirtualHost>
+
+　　现在，从不同的网络提交的请求都会由同一个VirtualHost来伺服。
+
+注意：
+
+　　在内网中，您可以使用server这个名字来代替server.example.com全名。
+
+跟上面一样，在上述的例子里，您可以用*来取代 具体的IP地址，这样就可以对所有的地址返回相同的内容了。
+
+在不同的端口上运行不同的站点
+
+　　如果您想让同一IP的不同端口伺服多个域名。您可以借助在 “NameVirtualHost”标签中定义端口这样的方法来达到这个目的。如果您想使用不带NameVirtualHost name:port的<VirtualHost name:port>或是直接用Listen指令，您的配置将无法生效。
+
+服务器配置
+
+Listen 80
+
+Listen 8080
+
+NameVirtualHost 172.20.30.40:80
+
+NameVirtualHost 172.20.30.40:8080
+
+<VirtualHost 172.20.30.40:80>
+
+ServerName www.example1.com
+
+DocumentRoot /www/domain-80
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.40:8080>
+
+ServerName www.example1.com
+
+DocumentRoot /www/domain-8080
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.40:80>
+
+ServerName www.example2.org
+
+DocumentRoot /www/otherdomain-80
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.40:8080>
+
+ServerName www.example2.org
+
+DocumentRoot /www/otherdomain-8080
+
+</VirtualHost>
+
+ 
+
+建立基于IP的虚拟主机
+
+　　一个有两个IP地址（172.20.30.40和 172.20.30.50）分别对应域名 www.example1.com和www.example2.org的服务 配置如下：
+
+服务器配置
+
+Listen 80
+
+<VirtualHost 172.20.30.40>
+
+DocumentRoot /www/example1
+
+ServerName www.example1.com
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.50>
+
+DocumentRoot /www/example2
+
+ServerName www.example2.org
+
+</VirtualHost>
+
+　　如果存在主服务器（main server），那么对没有出现在任一个 <VirtualHost>指令中的请求（比如，对 localhost的请求）都会由主服务器来伺服。
+
+ 
+
+混用基于端口和基于IP的虚拟主机
+
+　　如果您的服务器有两个IP地址（172.20.30.40和 172.20.30.50）分别对应域名 www.example1.com和www.example2.org。对每 个域名，您都希望在80端口和8080端口发布您的网站。您可以这样配置：
+
+服务器配置
+
+Listen 172.20.30.40:80
+
+Listen 172.20.30.40:8080
+
+Listen 172.20.30.50:80
+
+Listen 172.20.30.50:8080
+
+ 
+
+<VirtualHost 172.20.30.40:80>
+
+DocumentRoot /www/example1-80
+
+ServerName www.example1.com
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.40:8080>
+
+DocumentRoot /www/example1-8080
+
+ServerName www.example1.com
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.50:80>
+
+DocumentRoot /www/example2-80
+
+ServerName www.example1.org
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.50:8080>
+
+DocumentRoot /www/example2-8080
+
+ServerName www.example2.org
+
+</VirtualHost>
+
+ 
+
+混用基于域名和基于ip的虚拟主机
+
+　　如果您想在一些地址上配置基于域名的虚拟主机而在另外一些配置基于 IP的虚拟主机。
+
+服务器配置
+
+Listen 80
+
+NameVirtualHost 172.20.30.40
+
+<VirtualHost 172.20.30.40>
+
+DocumentRoot /www/example1
+
+ServerName www.example1.com
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.40>
+
+DocumentRoot /www/example2
+
+ServerName www.example2.org
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.40>
+
+DocumentRoot /www/example3
+
+ServerName www.example3.net
+
+</VirtualHost>
+
+# IP-based
+
+<VirtualHost 172.20.30.50>
+
+DocumentRoot /www/example4
+
+ServerName www.example4.edu
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.60>
+
+DocumentRoot /www/example5
+
+ServerName www.example5.gov
+
+</VirtualHost>
+
+ 
+
+使用_default_虚拟主机
+
+　　为所有端口配置 _default_虚拟主机
+
+　　这样配置，以捕获任何指向没指定的IP地址和端口的请求。比如 说：一个没被任何虚拟主机使用的地址/端口对。
+
+服务器配置
+
+<VirtualHost _default_:*>
+
+DocumentRoot /www/default
+
+</VirtualHost>
+
+　　使用这样一个使用通配符端口的默认虚拟主机可以有效的防止请求被主 服务器接收。
+
+　　如果一个地址/端口对已经被一个基于域名的虚拟主机使用，那么默认虚拟主机决不会处理发向这个地址/端口的请求。如果一个请求的Host:头中包含未知信息，或者干脆就没有，那么它会被第一 个基于域名的虚拟主机（就是在配置文件中首先出现的使用了那个地址/端 口对的虚拟主机）处理。
+
+　　您可以用AliasMatch或 RewriteRule来重写任何 请求，使它指向一个简单信息页面（a single information page或脚 本）。
+
+ 
+
+为不同的端口部署 _default_虚拟主机
+
+　　与第一种一样，但我们想让服务器侦听很多端口而第二个 _default_虚拟主机单独侦听80端口。
+
+服务器配置
+
+<VirtualHost _default_:80>
+
+DocumentRoot /www/default80
+
+# ...
+
+</VirtualHost>
+
+ 
+
+<VirtualHost _default_:*>
+
+DocumentRoot /www/default
+
+# ...
+
+</VirtualHost>
+
+　　侦听80端口的默认虚拟主机（必须出现在所有使用通配符端口 的虚拟主机之前）会捕获所有发向一个没有指定的IP地址的请求。主服务器 将不会用于伺服任何请求。
+
+ 
+
+为一个端口配置 _default_虚拟主机
+
+　　如果我们只想在80端口上建立唯一的一个默认虚拟主机，我们应该这样 配置：
+
+服务器配置
+
+<VirtualHost _default_:80>
+
+DocumentRoot /www/default
+
+...
+
+</VirtualHost>
+
+　　发向一个未进行设定的地址的80端口的请求将会为这个虚拟主机伺服； 而发向未进行设定的地址的其他端口的请求为主服务器伺服。
+
+ 
+
+将一个基于域名的虚拟主机移植为一个基于 IP的虚拟主机
+
+　　如果一个具有www.example2.org域名的虚拟主机（就是基于域名配置示例中的第二个）得到了自己的IP地址。 为了避免一些域名服务器或代理服务器在移植期间仍对这个域名做老的解析， 我们可以采用一种过渡方法：同时提供新旧两个IP地址的解析。
+
+　　达到这个目的很简单。因为我们只要简单的把新地址 （172.20.30.50）加入VirtualHost指令就行 了。
+
+服务器配置
+
+Listen 80
+
+ServerName www.example1.com
+
+DocumentRoot /www/example1
+
+NameVirtualHost 172.20.30.40
+
+<VirtualHost 172.20.30.40 172.20.30.50>
+
+DocumentRoot /www/example2
+
+ServerName www.example2.org
+
+# ...
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.40>
+
+DocumentRoot /www/example3
+
+ServerName www.example3.net
+
+ServerAlias *.example3.net
+
+# ...
+
+</VirtualHost>
+
+　　现在这个虚拟主机就可以用新地址（表现为一个基于IP的虚拟主机）和 旧地址（表现为一个基于域名的虚拟主机）同时进行访问了。
+
+ 
+
+使用ServerPath指令
+
+　　如果我们在一个服务器上运行了两个基于域名的虚拟主机。为了匹配正 确的虚拟主机，客户端必须发送正确的Host:头。而旧的使用 HTTP/1.0的客户端无法发送这样的头，这样，Apache就无法辨别客户端想要 连接哪个虚拟主机（会用主虚拟主机来伺服这个请求）。为了尽量提供向下 兼容性，我们可以可以提供一个主虚拟主机来返回一个页面，在页面中加入 指向基于域名的虚拟主机的URL前缀的链接。
+
+Server configuration
+
+NameVirtualHost 172.20.30.40
+
+<VirtualHost 172.20.30.40>
+
+# primary vhost
+
+DocumentRoot /www/subdomain
+
+RewriteEngine On
+
+RewriteRule ^/.* /www/subdomain/index.html
+
+# ...
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.40>
+
+DocumentRoot /www/subdomain/sub1
+
+ServerName www.sub1.domain.tld
+
+ServerPath /sub1/
+
+RewriteEngine On
+
+RewriteRule ^(/sub1/.*) /www/subdomain$1
+
+# ...
+
+</VirtualHost>
+
+ 
+
+<VirtualHost 172.20.30.40>
+
+DocumentRoot /www/subdomain/sub2
+
+ServerName www.sub2.domain.tld
+
+ServerPath /sub2/
+
+RewriteEngine On
+
+RewriteRule ^(/sub2/.*) /www/subdomain$1
+
+# ...
+
+</VirtualHost>
+
+　　由于ServerPath指令的作用， 发送到http://www.sub1.domain.tld/sub1/的请求总会 被sub1-vhost所伺服。
+
+　　如果客户端发送了正确的Host:头，发送到 http://www.sub1.domain.tld/的请求指挥被sub1-vhost伺服。 如果没有发送Host:头，客户端会得到从主虚拟主机发送的信 息页面。
+
+　　请注意，这里还有一点小问题：如果客户端没有发送Host:头， 发送到http://www.sub2.domain.tld/sub1/的请求还是会被 sub1-vhost伺服。
+
+　　RewriteRule指令用以确保正确发送了Host:头的客户端可以任意使用这两种URL变量， 比如说：使用或不使用URL前缀。
+
+只允许域名访问，不允许以ip形式访问
+NameVirtualHost 192.168.164.133:80 设置此处为你的服务器ip和服务端口
+<VirtualHost 192.168.164.133:80>          // 服务器ip和端口
+ServerAdmin webmaster@msn.com          // 管理员邮件
+DocumentRoot /var/www/html/nofile          // 网站绑定目录
+ServerName 192.168.164.133          // 访问网址
+ServerAlias 192.168.164.133
+ErrorLog logs/nofile.com.log
+CustomLog logs/nofile.com-access_log common
+</VirtualHost>
+用ServerAlias 可以绑定多域名到一个网站上
+<VirtualHost 192.168.164.133:80>
+ServerAdmin webmaster@msn.com
+DocumentRoot /var/www/html/aaa.com
+ServerName aaa.com
+ServerAlias www.aaa.com          // 用ServerAlias绑定多域名
+ServerAlias bbb.com
+ServerAlias www.bbb.com
+ErrorLog logs/aaa.com.log
+CustomLog logs/aaa.com-access_log common
+</VirtualHost>

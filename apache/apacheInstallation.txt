@@ -1,0 +1,93 @@
+PHP [必须]
+1.Apache安装
+
+A.apr安装
+
+wget -c http://mirror.bjtu.edu.cn/apache/apr/apr-1.5.1.tar.gz
+
+tar -zxvf apr-1..5.tar.gz
+
+cd apr-1.5.1
+
+在configure里面 RM='$RM  -f'   这里的$RM后面一定有一个空格。 如果后面没有空格，直接连接减号，就依
+
+然会报错。把RM='$RM'改为RM='$RM  -f'
+
+./configure --prefix=/usr/local/apr
+
+make
+
+make install
+
+B.apr-util安装
+
+wget -c wget http://mirror.bjtu.edu.cn/apache/apr/apr-util-1.5.4.tar.gz
+
+tar -zxvf  apr-util-1.5.4.tar.gz
+
+cd apr-util-1.5.4
+
+./configure --prefix=/usr/local/apr-util --with-apr=/usr/local/apr
+
+make
+
+make install
+
+C.pcre安装
+
+wget -c ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.36.tar.gz
+
+tar -zxvf pcre-8.36.tar.gz
+
+cd pcre-8.36
+
+./configure --prefix=/usr/local/pcre
+
+make
+
+make install
+
+D.apache安装
+
+wget -c http://mirror.symnds.com/software/Apache//httpd/httpd-2.4.10.tar.gz
+
+tar -zxvf httpd-2.4.10.tar.gz
+
+cd httpd-2.4.10
+
+./configure --prefix=/usr/local/apache --enable-so-rewrite=shared --with-mpm=prefork --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr-util --with-pcre=/usr/local/pcre
+
+
+如果提示openssl(旧版)，运行
+
+yum install openssl-devel
+
+yum update openssl
+
+make
+
+make install
+ 
+
+E.把apache加入系统service，开机自启动
+ 
+
+cp /usr/local/apache/bin/apachectl /etc/init.d/httpd
+
+vim /etc/init.d/httpd
+
+# beyound
+
+# chkconfig: 35 85 15
+
+# description: Apache is a World Wide Web server.
+ 
+chmod +x /etc/init.d/httpd
+
+/sbin/chkconfig --add httpd
+
+/sbin/chkconfig --list httpd
+
+ln -s /sbin/chkconfig /usr/bin/chkconfig
+
+ln -s /sbin/service /usr/bin/service

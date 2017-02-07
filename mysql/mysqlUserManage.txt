@@ -1,0 +1,16 @@
+create user cgitest;
+update mysql.user set password=PASSWORD('test') where user='cgitest';
+
+####赋予远程登录查询权限
+grant select on mysql.* to 'cgitest'@'192.168.8.237'
+grant select on mysql.* to 'cgitest'@'%' identified by password 'test'
+
+show grants for 'cgitest'@'192.168.8.237';
+
+删除用户
+hadoop@ubuntu:~$ mysql -u用户名 -p密码
+mysql>delete from user where user='用户名' and host='localhost';
+mysql>flush privileges;
+//删除用户的数据库
+mysql>drop database dbname;
+

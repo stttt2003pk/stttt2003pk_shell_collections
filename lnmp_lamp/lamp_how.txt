@@ -1,0 +1,756 @@
+A.整合apache
+
+
+
+mkdir -p /home/www/test.com
+
+chown -R www.www /home/www
+
+
+
+apache将被nginx代理，因此将apache的默认监听端口改为8080
+
+
+
+vim /usr/local/apache/conf/httpd.conf
+
+
+
+将hosts定向到 Include conf/extra/httpd-vhosts.conf
+
+Listen 8080
+
+
+
+User www
+
+Group www
+
+
+
+<IfModule dir_module>
+
+    DirectoryIndex index.php index.html index.htm
+
+</IfModule>
+
+
+
+vim /usr/local/apache/conf/extra/httpd-vhosts.conf
+
+将里面的*:80全部改成yourdomain.name:8080
+
+并添加虚拟hosts
+
+
+
+<VirtualHost *:8080>
+
+    ServerAdmin webmaster@a.test.com
+
+    DocumentRoot "/home/www/test.com"
+
+    DirectoryIndex   index.php  index.html
+
+    ServerName a.test.com
+
+    <Directory "/home/www/a.test.com">
+
+        AllowOverride None
+
+        Options None
+
+        Require all granted
+
+    </Directory>
+
+    ErrorLog "/var/log/www/apache/a.test.com-error_log"
+
+    CustomLog "/var/log/www/apache/a.test.com-access_log" common
+
+</VirtualHost>
+
+
+
+vim /home/www/test.com/phpinfo.php
+
+
+
+<?php
+
+phpinfo();
+
+
+
+service httpd start，访问http://a.test.com:8080/phpinfo.php
+
+
+
+
+
+B.配置php-fpm
+
+
+
+cp /usr/local/php/etc/php-fpm.conf.default /usr/local/php/etc/php-fpm.conf
+
+#开启php-fpm慢脚本日志
+
+request_slowlog_timeout = 30
+
+slowlog = /var/log/www/php/php-fpm.log.slow
+
+
+
+#脚本等待时间
+
+request_terminate_timeout = 120
+
+
+
+pid = /usr/local/php/var/run/php-fpm.pid
+
+error_log = /var/log/www/php/php-fpm.log.error
+
+log_level = notice
+
+
+
+user = www
+
+group = www
+
+
+
+listen = 127.0.0.1:9000
+
+pm = dynamic
+
+pm.max_children = 100
+
+pm.start_servers = 10
+
+pm.min_spare_servers = 5
+
+pm.max_spare_servers = 100
+
+pm.max_requests = 1000
+
+
+
+/usr/local/php/sbin/php-fpm
+
+
+
+#将php-fpm整合成系统服务
+
+
+
+vim /etc/init.d/php-fpm
+
+
+
+#! /bin/sh
+
+### BEGIN INIT INFO
+
+# Provides:          php-fpm
+
+# Required-Start:    $remote_fs $network
+
+# Required-Stop:     $remote_fs $network
+
+# Default-Start:     2 3 4 5
+
+# Default-Stop:      0 1 6
+
+# Short-Description: starts php-fpm
+
+# Description:       starts the PHP FastCGI Process Manager daemon
+
+### END INIT INFO
+
+
+
+prefix=/usr/local/php
+
+exec_prefix=${prefix}
+
+
+
+php_fpm_BIN=${exec_prefix}/sbin/php-fpm
+
+php_fpm_CONF=${prefix}/etc/php-fpm.conf
+
+php_fpm_PID=${prefix}/var/run/php-fpm.pid
+
+
+
+php_opts="--fpm-config $php_fpm_CONF"
+
+
+
+wait_for_pid () {
+
+    try=0
+
+
+
+    while test $try -lt 35 ; do
+
+
+
+        case "$1" in
+
+            'created')
+
+            if [ -f "$2" ] ; then
+
+                try=''
+
+                break
+
+            fi
+
+            ;;
+
+
+
+            'removed')
+
+            if [ ! -f "$2" ] ; then
+
+                try=''
+
+                break
+
+            fi
+
+            ;;
+
+        esac
+
+
+
+        echo -n .
+
+        try=`expr $try + 1`
+
+        sleep 1
+
+
+
+    done
+
+
+
+}
+
+
+
+case "$1" in
+
+    start)
+
+        echo -n "Starting php-fpm "
+
+
+
+        $php_fpm_BIN $php_opts
+
+
+
+        if [ "$?" != 0 ] ; then
+
+            echo " failed"
+
+            exit 1
+
+        fi
+
+
+
+        wait_for_pid created $php_fpm_PID
+
+
+
+        if [ -n "$try" ] ; then
+
+            echo " failed"
+
+            exit 1
+
+        else
+
+            echo " done"
+
+        fi
+
+    ;;
+
+
+
+    stop)
+
+        echo -n "Gracefully shutting down php-fpm "
+
+
+
+        if [ ! -r $php_fpm_PID ] ; then
+
+            echo "warning, no pid file found - php-fpm is not running ?"
+
+            exit 1
+
+        fi
+
+
+
+        kill -QUIT `cat $php_fpm_PID`
+
+
+
+        wait_for_pid removed $php_fpm_PID
+
+
+
+        if [ -n "$try" ] ; then
+
+            echo " failed. Use force-quit"
+
+            exit 1
+
+        else
+
+            echo " done"
+
+        fi
+
+    ;;
+
+
+
+    force-quit)
+
+        echo -n "Terminating php-fpm "
+
+
+
+        if [ ! -r $php_fpm_PID ] ; then
+
+            echo "warning, no pid file found - php-fpm is not running ?"
+
+            exit 1
+
+        fi
+
+
+
+        kill -TERM `cat $php_fpm_PID`
+
+
+
+        wait_for_pid removed $php_fpm_PID
+
+
+
+        if [ -n "$try" ] ; then
+
+            echo " failed"
+
+            exit 1
+
+        else
+
+            echo " done"
+
+        fi
+
+    ;;
+
+
+
+    restart)
+
+        $0 stop
+
+        $0 start
+
+    ;;
+
+
+
+    reload)
+
+
+
+        echo -n "Reload service php-fpm "
+
+
+
+        if [ ! -r $php_fpm_PID ] ; then
+
+            echo "warning, no pid file found - php-fpm is not running ?"
+
+            exit 1
+
+        fi
+
+
+
+        kill -USR2 `cat $php_fpm_PID`
+
+
+
+        echo " done"
+
+    ;;
+
+
+
+    *)
+
+        echo "Usage: $0 {start|stop|force-quit|restart|reload}"
+
+        exit 1
+
+    ;;
+
+
+
+esac
+
+
+
+chmod +x /etc/init.d/php-fpm
+
+
+
+service php-fpm start
+
+service php-fpm stop
+
+service php-fpm reload
+
+service php-fpm restart
+
+
+
+#开机启动
+
+vim /etc/rc.local
+
+添加一行
+
+/usr/local/php/sbin/php-fpm &
+
+
+
+C.Nginx整合
+
+
+
+mkdir -p /usr/local/nginx/conf/vhosts
+
+
+
+vim /usr/local/nginx/conf/nginx.conf
+
+
+
+user  www www;
+
+worker_processes  8;
+
+
+
+error_log  /var/log/www/nginx/error.log crit;
+
+#error_log  /var/log/www/nginx/error.log  notice;
+
+#error_log  /var/log/www/nginx/error.log  info;
+
+
+
+#pid        logs/nginx.pid;
+
+
+
+worker_rlimit_nofile 65535;
+
+events {
+
+    use epoll;
+
+    worker_connections  1024;
+
+}
+
+
+
+
+
+http {
+
+    include       mime.types;
+
+    default_type  application/octet-stream;
+
+
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+
+                                  '$status $body_bytes_sent "$http_referer" '
+
+                                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+
+
+    server_names_hash_bucket_size 128;
+
+    client_header_buffer_size 32k;
+
+    large_client_header_buffers 4 32k;
+
+    client_max_body_size 8m;
+
+
+
+    sendfile        on;
+
+    tcp_nopush      on;
+
+    tcp_nodelay     on;
+
+    keepalive_timeout  65;
+
+
+
+    fastcgi_connect_timeout 300;
+
+    fastcgi_send_timeout 300;
+
+    fastcgi_read_timeout 300;
+
+    fastcgi_buffer_size 64k;
+
+    fastcgi_buffers 4 64k;
+
+    fastcgi_busy_buffers_size 128k;
+
+    fastcgi_temp_file_write_size 128k;
+
+
+
+    proxy_set_header   Host   $host;
+
+    proxy_set_header   X-Real-IP  $remote_addr;
+
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+
+
+
+    gzip  on;
+
+    gzip_min_length  1k;
+
+    gzip_buffers     4 16k;
+
+    gzip_http_version 1.0;
+
+    gzip_comp_level 2;
+
+    gzip_types       text/plain application/x-javascript text/css application/xml;
+
+    gzip_vary on;
+
+
+
+    include vhosts/*.conf;
+
+}
+
+
+
+vim /usr/local/nginx/conf/vhosts/a.test.com.conf
+
+
+
+#反向代理
+
+upstream www.test {
+
+        a.test.com:8080;
+
+}
+
+server {
+
+        listen       80;
+
+        server_name  www.test.com;
+
+        charset utf-8;
+
+
+
+        root /home/www/www.test;
+
+        location / {
+
+                index  index.php index.html index.htm;
+
+if (!-e $request_filename) {
+
+            #rewrite  ^(.*)$  /index.php?s=$1  last;
+
+            #break;
+
+        }
+
+        }
+
+
+
+        #error_page  404              /404.html;
+
+
+
+        # redirect server error pages to the static page /50x.html
+
+        #
+
+        error_page   500 502 503 504  /50x.html;
+
+        location = /50x.html {
+
+                root   html;
+
+        }
+
+
+
+        location ~ \.php$ {    #開啟支持php
+
+            fastcgi_pass   127.0.0.1:9000;    #php    fastcgi服務地址及端口
+
+            fastcgi_index  index.php;
+
+            fastcgi_param  SCRIPT_FILENAME $document_root$fastcgi_script_name;
+
+            include        fastcgi_params;
+
+    }
+
+}
+
+
+
+service nginx reload
+
+
+
+D.Apache+nginx+php反向代理
+
+
+
+vim /usr/local/nginx/conf/vhosts/a.test.com.conf
+
+
+
+#反向代理
+
+
+server {
+
+        listen       80;
+
+        server_name  www.test.com;
+
+        charset utf-8;
+
+
+
+        root /home/www/test.com;
+
+        location / {
+
+                index  index.php index.html index.htm;
+
+        }
+
+
+
+        #error_page  404              /404.html;
+
+
+
+        # redirect server error pages to the static page /50x.html
+
+        #
+
+        error_page   500 502 503 504  /50x.html;
+
+        location = /50x.html {
+
+                root   html;
+
+        }
+
+
+
+        location ~ \.php$ {                #fastcgi_pass   127.0.0.1:9000;    #php    fastcgi服務地址及端口
+
+            #fastcgi_index  index.php;
+
+            #fastcgi_param  SCRIPT_FILENAME $document_root$fastcgi_script_name;
+
+            #include        fastcgi_params;
+
+            proxy_pass   http://www.test;  #apache反向代理
+
+            proxy_pass_header User-Agent;
+
+            proxy_redirect          off;
+
+            proxy_set_header        Host $host;
+
+            proxy_set_header        X-Real-IP $remote_addr;
+
+            proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+
+            client_max_body_size    10m;
+
+            client_body_buffer_size 128k;
+
+            proxy_connect_timeout   90;
+
+            proxy_send_timeout      90;
+
+            proxy_read_timeout      90;
+
+            proxy_buffer_size       512k;
+
+            proxy_buffers           4 512k;
+
+            proxy_busy_buffers_size 512k;
+
+            proxy_temp_file_write_size 512k;
+
+        }
+
+}
+
+
+
+service nginx reload
+
+
+
+再访问 http://www.test.com/phpinfo.php
+
+
+
+如上图，系统已经用apache来解析动态请求了，反向代理配置正确
+
+完成

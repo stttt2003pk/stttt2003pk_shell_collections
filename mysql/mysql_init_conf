@@ -1,0 +1,201 @@
+[mysqld]
+
+# Remove leading # and set to the amount of RAM for the most important data
+# cache in MySQL. Start at 70% of total RAM for dedicated server, else 10%.
+# innodb_buffer_pool_size = 128M
+
+# Remove leading # to turn on a very important data integrity option: logging
+# changes to the binary log between backups.
+# log_bin
+
+# These are commonly set, remove the # and set as required.
+# basedir = .....
+# datadir = .....
+# port = .....
+# server_id = .....
+# socket = .....
+
+# Remove leading # to set options mainly useful for reporting servers.
+# The server defaults are faster for transactions and fast SELECTs.
+# Adjust sizes as needed, experiment to find the optimal values.
+##################################################
+#innodb
+user=mysql
+innodb_buffer_pool_size=6G
+innodb_log_file_size=4G
+innodb_log_buffer_size = 8M
+innodb_flush_log_at_trx_commit=2
+innodb_file_per_table=1
+innodb_file_io_threads=4
+innodb_flush_method=O_DIRECT_NO_FSYNC
+innodb_io_capacity=2000
+innodb_io_capacity_max=6000
+innodb_lru_scan_depth=2000
+innodb_thread_concurrency = 0
+innodb_additional_mem_pool_size=16M
+innodb_autoinc_lock_mode = 2
+##################################################
+
+# Binary log/replication
+
+log-bin
+sync_binlog=1
+sync_relay_log=1
+relay-log-info-repository=TABLE
+master-info-repository=TABLE
+expire_logs_days=7
+binlog_format=ROW
+transaction-isolation=READ-COMMITTED
+#################################################
+
+#cache
+
+tmp_table_size=512M
+character-set-server=utf8
+collation-server=utf8_general_ci
+skip-external-locking
+back_log=1024
+key_buffer_size=1024M
+thread_stack=256k
+read_buffer_size=8M
+thread_cache_size=64
+query_cache_size=128M
+max_heap_table_size=256M
+query_cache_type=1
+binlog_cache_size = 2M
+table_open_cache=128
+thread_cache=1024
+thread_concurrency=8
+wait_timeout=30
+join_buffer_size = 1024M
+sort_buffer_size = 8M
+read_rnd_buffer_size = 8M
+#################################################
+
+#connect
+
+max-connect-errors=100000
+max-connections=1000
+#################################################
+explicit_defaults_for_timestamp=true
+sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
+##################################################
+
+
+#设定InnoDB缓存表数据和索引的内存缓冲区大小 innodb_buffer_pool_size=6G
+#默认值为 48M. 有很高写入吞吐量
+
+#InnoDB 存储引擎的事务日志所使用的缓冲区 innodb_log_file_size=4G
+
+#参数对于InnoDB存储引擎写入操作的性能 innodb_flush_log_at_trx_commit=2
+
+#修改InnoDB为独立表空间模式,每个数据库的每个表都会生成一个数据空间 innodb_file_per_table=1
+
+#限制Innodb能打开的表的数据 innodb_file_io_threads=4
+
+#如果使用硬件RAID磁盘控制器, 需要设置为 O_DIRECT innodb_flush_method=O_DIRECT
+
+#设置会影响InnoDB每秒在后台执行多少操作 innodb_io_capacity=2000 innodb_io_capacity_max=6000
+
+#这个参数必须要和innodb_io_capacity设置一样 innodb_lru_scan_depth=2000
+
+#限制了一次有多少线程能进入内核,0表示不限制进入内核的数量 innodb_thread_concurrency = 0
+
+#除了缓存表数据和索引外,可以为操作所需的其他内部项分配缓存来提升InnoDB的性能,这些内存就可以通过此参数来分配 innodb_additional_mem_pool_size=16M
+
+#修改为基于行的复制 innodb_autoinc_lock_mode = 2
+
+# Binary log/replication(这里主要是复制功能，也就是主从,提前配置好，后面讲主从配置) #二进制日志 log-bin
+
+#为了在最大程序上保证复制的InnoDB事务持久性和一致性 sync_binlog=1 sync_relay_log=1
+
+#启用此两项,可用于实现在崩溃时保证二进制及从服务器安全的功能 relay-log-info-repository=TABLE master-info-repository=TABLE
+
+#设置清除日志时间 expire_logs_days=7
+
+#行复制 binlog_format=ROW
+
+#mysql数据库事务隔离级别有四种(READ UNCOMMITTED,READ COMMITTED,REPEATABLE READ,SERIALIZABLE) transaction-isolation=READ-COMMITTED
+
+#cache
+#内部内存临时表的最大值 tmp_table_size=512M character-set-server=utf8 collation-server=utf8_general_ci
+
+#即跳过外部锁定 skip-external-locking
+
+#MySQL能暂存的连接数量(根据实际设置) back_log=1024
+
+#指定索引缓冲区的大小,只对MyISAM表起作用,这里写上也没有关系 key_buffer_size=1024M
+
+#这条指令限定用于每个数据库线程的栈大小 thread_stack=256k
+
+#当一个查询不断地扫描某一个表,MySQL会为它分配一段内存缓冲区 read_buffer_size=8M
+
+#线程缓存 thread_cache_size=64
+
+#查询缓存大小 query_cache_size=128M
+
+#内部内存临时表的最大值,每个线程都要分配 ax_heap_table_size=256M
+
+#将查询结果放入查询缓存中 query_cache_type=1
+
+#代表在事务过程中容纳二进制日志SQL语句的缓存大小 binlog_cache_size = 2M
+
+#同样是缓存表大小 table_open_cache=128
+
+#缓存线程 thread_cache=1024
+
+推荐设置为服务器 CPU核数的2倍 thread_concurrency=32 wait_timeout=30
+
+#表和表联接的缓冲区的大小 join_buffer_size = 1024M
+
+#是一个connection级参数,在每个connection第一次需要使用这个buffer的时候,一次性分配设置的内存 sort_buffer_size=8M
+
+#随机读取数据缓冲区使用内存 read_rnd_buffer_size = 8M
+
+#connect
+#是一个MySQL中与安全有关的计数器值,它负责阻止过多尝试失败的客户端以防止暴力破解密码 max-connect-errors=100000
+
+#连接数 max-connections=1000
+
+#开启查询缓存 explicit_defaults_for_timestamp=true
+
+#mysql服务器能够工作在不同的模式下,并能针对不同的客户端以不同的方式应用这些模式 sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
+
+#优化内核参数
+
+#vi /etc/sysctl.conf
+#net.ipv4.tcp_syncookies = 1
+#net.ipv4.tcp_tw_reuse = 1
+#net.ipv4.tcp_tw_recycle = 1
+#net.ipv4.ip_local_port_range = 1024 65000
+#net.ipv4.tcp_max_syn_backlog = 8192
+#net.ipv4.tcp_max_tw_buckets = 5000
+#net.ipv4.tcp_max_syn_backlog = 65536
+#net.core.netdev_max_backlog =  32768
+#net.core.somaxconn = 32768
+#net.core.wmem_default = 8388608
+#net.core.rmem_default = 8388608
+#net.core.rmem_max = 16777216
+#net.core.wmem_max = 16777216
+#net.ipv4.tcp_timestamps = 0
+#net.ipv4.tcp_synack_retries = 2
+#net.ipv4.tcp_syn_retries = 2
+#net.ipv4.tcp_tw_recycle = 1
+#net.ipv4.tcp_tw_reuse = 1
+#net.ipv4.tcp_mem = 94500000 915000000 927000000
+#net.ipv4.tcp_max_orphans = 3276800
+
+#sysctl -p
+
+#修改下ulimit，添加在后面
+#vi /etc/security/limits.conf
+#*        soft   nproc  65535
+#*        hard   nproc  65535
+#*        soft   nofile  65535
+#*        hard   nofile  65535
+#
+# vi /etc/security/limits.d/90-nproc.conf(修改下)
+#*          soft    nproc    65535
+#
+#然后记得重启下服务器
+#reboot

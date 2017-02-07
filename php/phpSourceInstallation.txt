@@ -1,0 +1,201 @@
+PHP编译安装
+
+A.yum安装相关库包
+
+yum install gd-devel php-gd
+
+yum install zlib zlib-devel
+
+yum install freetype-devel freetype-demos freetype-utils
+
+yum install libpng libpng-devel libpng10 libpng10-devel
+
+yum install libjpeg libjpeg-devel
+
+yum install ImageMagick
+
+yum install flex
+
+yum install ImageMagick-devel
+
+yum install libxml2 libxml2-devel
+
+yum install libxml2 curl curl-devel
+
+yum -y install libtool libtool-ltdl-devel
+
+yum install mhash-devel
+
+yum install patch
+
+
+
+B.可能需要源码编译的包
+
+wget -c ftp://mcrypt.hellug.gr/pub/crypto/mcrypt/libmcrypt/libmcrypt-2.5.7.tar.gz
+
+tar -zxvf libmcrypt-2.5.7.tar.gz
+
+cd libmcrypt-2.5.7
+
+./configure --prefix=/usr/local/libmcrypt
+
+make && make install
+
+
+
+wget -c http://iweb.dl.sourceforge.net/project/mhash/mhash/0.9.9.9/mhash-0.9.9.9.tar.gz
+
+tar -zxvf mhash-0.9.9.9.tar.gz
+
+cd mhash-0.9.9.9
+
+./configure --prefix=/usr/local/libmhash
+
+make && make install
+
+
+
+C.编译安装
+
+
+
+wget -c http://cn2.php.net/get/php-5.6.6.tar.gz/from/this/mirror
+
+tar -zxvf php-5.6.6.tar.gz
+
+cd php-5.6.6
+
+注意加密模块--with-mcrypt的版本兼容问题
+
+不需要--with-libdir=lib64
+否则会报mysql sock错误
+--enable-opcache=no 似乎会跳过一个平台架构检查
+最终编译成功
+
+还需要安装zlib和libzip
+--with-iconv-dir=/usr/local估计也要加上 iconv没有安装和配置
+
+64位注意修改
+
+./configure --prefix=/usr/local/php --with-config-file-path=/usr/local/php/etc --with-mysql=/usr/local/mysql/ --with-mysqli=/usr/local/mysql/bin/mysql_config --with-apxs2=/usr/local/apache/bin/apxs --with-iconv-dir=/usr --with-freetype-dir --with-jpeg-dir --with-png-dir --with-zlib --with-zlib-dir=/usr --with-libxml-dir=/usr --enable-xml --disable-rpath --enable-discard-path --enable-safe-mode --enable-bcmath --enable-shmop --enable-sysvsem --enable-sysvshm --enable-sysvmsg --enable-inline-optimization --with-curl --with-curlwrappers --enable-mbregex  --enable-fpm --enable-fastcgi --enable-force-cgi-redirect --enable-mbstring --with-mcrypt=/usr/local/libmcrypt --with-gd --enable-gd-native-ttf --with-openssl --with-mhash --enable-pcntl --enable-sockets --with-ldap --with-ldap-sasl --with-xmlrpc --enable-zip --enable-soap --enable-ftp --enable-sigchild --with-pear --enable-cli --enable-exif --enable-calendar --with-bz2 --enable-pdo --with-pdo-mysql --enable-freetype --disable-fileinfo --enable-opcache=no
+
+
+
+
+configure: error: Cannot find ldap.h
+
+yum install openldap
+
+yum install openldap-devel
+
+
+
+Configure: error: Please reinstall the BZip2 distribution
+centos: yum install bzip2 bzip2-devel
+
+
+
+错误：configure: error: Cannot find ldap libraries in /usr/lib
+
+解决办法:cp -frp /usr/lib64/libldap* /usr/lib/
+
+
+
+错误：configure: error: Unable to find your mysql installation
+
+解决办法：ln -s /usr/local/mysql/bin/mysql_config /usr/bin/mysql_config
+
+ln -s /usr/lib64/mysql/libmysqlclient.so.16 /usr/lib/libmysqlclient.so
+ln -s /usr/local/mysql/lib/libmysqlclient.so.18 /usr/lib
+ldconfig
+
+编译出错后重新编译时需先make clean再make
+
+
+
+
+make
+
+make install
+
+修改apache的配置文件httpd.conf
+
+  vim /usr/local/apache/conf/httpd.conf
+
+  然后在文本最后面添加
+
+  LoadModule php5_module modules/libphp5.so
+ (注意，在apache安装目录下，modules下有libphp5.so，这是php安装时添加进去的，如果没有，php，你需要重装下)
+
+AddType application/x-httpd-php .php   (.前面有空格)
+
+AddType application/x-httpd-php .html
+
+
+
+
+
+
+
+
+
+cp php.ini-production /usr/local/php/etc/php.ini
+
+
+
+
+
+
+
+查看PHP版本命令：
+
+#php -v
+
+
+
+这个命令是删除不干净的
+
+#yum remove php
+
+因为使用这个命令以后再用
+
+#php -v
+
+还是会看到有版本信息的。。。。。
+
+
+
+
+
+必须强制删除
+
+#rpm -qa|grep php
+
+提示如下
+
+#php-pdo-5.1.6-27.el5_5.3
+#php-MySQL-5.1.6-27.el5_5.3
+#php-xml-5.1.6-27.el5_5.3
+#php-cli-5.1.6-27.el5_5.3
+#php-common-5.1.6-27.el5_5.3
+#php-gd-5.1.6-27.el5_5.3
+
+注意卸载要先卸载没有依赖的
+
+pdo是mysql的依赖项；common是gd的依赖项；
+例如：# rpm -e php-pdo-5.1.6-27.el5_5.3
+error: Failed dependencies:
+        php-pdo is needed by (installed) php-mysql-5.1.6-27.el5_5.3.i386
+
+所以正确的卸载顺序是：
+# rpm -e php-mysql-5.1.6-27.el5_5.3
+# rpm -e php-pdo-5.1.6-27.el5_5.3
+# rpm -e php-xml-5.1.6-27.el5_5.3
+# rpm -e php-cli-5.1.6-27.el5_5.3
+# rpm -e php-gd-5.1.6-27.el5_5.3
+# rpm -e php-common-5.1.6-27.el5_5.3
+
+再用# php -v
+
+查看版本信息已经没有提示

@@ -1,0 +1,29 @@
+时间: 2015-08-06 / 分类: 服务器技术 / 浏览次数: 33,979 次 / 3个评论 发表评论
+国外的yum源由于众所周知的GFW原因，有的被墙，有的很慢，阿里云依靠强大的技术优势建立了国内的开源镜像。
+阿里云Linux安装镜像源地址：http://mirrors.aliyun.com/
+第一步：备份你的原镜像文件，以免出错后可以恢复。
+备份(如有配置其他epel源)
+
+mv /etc/yum.repos.d/epel.repo /etc/yum.repos.d/epel.repo.backup
+mv /etc/yum.repos.d/epel-testing.repo /etc/yum.repos.d/epel-testing.repo.backup
+第二步：下载新repo 到/etc/yum.repos.d/
+
+
+epel(RHEL 7)
+wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-7.repo
+
+epel(RHEL 6)
+wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-6.repo
+
+epel(RHEL 5)
+wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-5.repo
+
+第三步：运行yum makecache生成缓存,先清除掉老缓存，然后重建缓存
+
+yum clean all && yum makecache
+
+yum --disablerepo="*" --enablerepo="epel" list available
+
+yum --disablerepo="*" --enablerepo="epel" search nginx
+
+yum --disablerepo="*" --enablerepo="epel" install nginx

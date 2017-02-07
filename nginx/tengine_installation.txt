@@ -1,0 +1,301 @@
+wget -c http://zlib.net/zlib-1.2.8.tar.gz
+
+tar -zxvf zlib-1.2.8.tar.gz
+
+
+
+wget -c http://www.openssl.org/source/openssl-1.0.1e.tar.gz
+
+tar -zxvf openssl-1.0.1e.tar.gz
+
+
+
+wget http://labs.frickle.com/files/ngx_cache_purge-2.3.tar.gz
+
+
+
+tar zxvf ngx_cache_purge-2.3.tar.gz
+
+
+
+
+
+groupadd www    //添加一个www标准组
+
+useradd -g www www   //添加www用户并加到www组中
+
+
+
+B.下载安装
+
+
+
+wget -c http://tengine.taobao.org/download/tengine-2.1.0.tar.gz
+
+tar -zxvf tengine-2.1.0.tar.gz
+
+cd tengine-2.1.0
+
+
+
+./configure --user=www --group=www --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_sub_module --with-http_realip_module --with-http_flv_module --with-http_dav_module --with-http_gzip_static_module  --with-http_addition_module --with-http_ssl_module --with-openssl=../openssl-1.0.1t --with-pcre=../pcre-8.39  --with-zlib=../zlib-1.2.8 --add-module=/tmp/src/ngx_cache_purge-2.3
+
+make
+
+make install
+
+
+
+C.配置
+
+
+
+vim /etc/init.d/nginx
+
+
+
+#! /bin/sh
+
+
+
+# Author: rui ding
+
+
+
+# Modified: Geoffrey Grosenbach http://topfunky.com
+
+
+
+# Modified: Clement NEDELCU
+
+
+
+# Reproduced with express authorization from its contributors
+
+
+
+set -e
+
+
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+
+
+DESC="nginx daemon"
+
+
+
+NAME=nginx
+
+
+
+DAEMON=/usr/local/nginx/sbin/$NAME
+
+
+
+SCRIPTNAME=/etc/init.d/$NAME
+
+
+
+
+
+
+
+# If the daemon file is not found, terminate the script.
+
+
+
+test -x $DAEMON || exit 0
+
+
+
+
+
+start() {
+
+
+
+  $DAEMON || echo -n " already running"
+
+
+
+}
+
+
+
+
+
+stop() {
+
+
+
+  $DAEMON -s quit || echo -n " not running"
+
+
+
+}
+
+
+
+
+
+reload() {
+
+
+
+  $DAEMON -s reload || echo -n " could not reload"
+
+
+
+}
+
+
+
+
+
+case "$1" in
+
+
+
+  start)
+
+
+
+    echo -n "Starting $DESC: $NAME"
+
+
+
+    start
+
+
+
+    echo "."
+
+
+
+  ;;
+
+
+
+  stop)
+
+
+
+    echo -n "Stopping $DESC: $NAME"
+
+
+
+    stop
+
+
+
+    echo "."
+
+
+
+  ;;
+
+
+
+  reload)
+
+
+
+    echo -n "Reloading $DESC configuration..."
+
+
+
+    reload
+
+
+
+    echo "reloaded."
+
+
+
+  ;;
+
+
+
+  restart)
+
+
+
+  echo -n "Restarting $DESC: $NAME"
+
+
+
+  stop
+
+
+
+# Sleep for two seconds before starting again, this should give the
+
+
+
+# Nginx daemon some time to perform a graceful stop.
+
+
+
+  sleep 2
+
+
+
+  start
+
+
+
+  echo "."
+
+
+
+  ;;
+
+
+
+  *)
+
+
+
+  echo "Usage: $SCRIPTNAME {start|stop|restart|reload}" >&2
+
+
+
+  exit 3
+
+
+
+  ;;
+
+
+
+esac
+
+
+
+exit 0
+
+
+
+
+
+chmod +x /etc/init.d/nginx
+
+
+
+service  nginx  start
+
+service  nginx  reload
+
+service  nginx  restart
+
+service  nginx   stop
+
+
+
+vim /etc/rc.local
+
+添加一行
+
+/usr/local/nginx/sbin/nginx &

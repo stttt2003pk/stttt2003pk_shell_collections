@@ -16,7 +16,6 @@ def backuprepo():
     os.system(cmd)
     return
 
-
 def reBackuprepo():
     repo_path = '/etc/yum.repos.d/'
     backup_path = '/etc/yum.repos.d/backup/'
